@@ -2,11 +2,12 @@ import { atom } from "jotai";
 import { atomWithImmer } from "jotai/immer";
 import { atomFamily, selectAtom } from "jotai/utils";
 import lodashGet from "lodash/get";
+import isEqual from "lodash/isEqual";
 import { FieldErrors, TouchedFields } from "../validation/types";
 
 export const ATOM_SCOPE = Symbol("remix-validated-form-scope");
 
-export type FormState = {
+export type InternalFormState = {
   // Actual state
   hydrated: boolean;
   fieldErrors?: FieldErrors;
@@ -19,8 +20,21 @@ export type FormState = {
   action?: string;
   subaction?: string;
   defaultValues?: { [fieldName: string]: any };
+
+  // Internal
   validateField: (fieldName: string) => Promise<string | null>;
   registerReceiveFocus: (fieldName: string, handler: () => void) => () => void;
+};
+
+export type FormState = {
+  fieldErrors: FieldErrors;
+  isSubmitting: boolean;
+  hasBeenSubmitted: boolean;
+  touchedFields: TouchedFields;
+  defaultValues: { [fieldName: string]: any };
+  action?: string;
+  subaction?: string;
+  isValid: boolean;
 };
 
 export type FormAtom = ReturnType<typeof formRegistry>;
@@ -32,7 +46,7 @@ export type FieldState = {
 };
 
 export const formRegistry = atomFamily((formId: string | symbol) =>
-  atomWithImmer<FormState>({
+  atomWithImmer<InternalFormState>({
     hydrated: false,
     isSubmitting: false,
     hasBeenSubmitted: false,
@@ -63,9 +77,12 @@ export const fieldDefaultValueAtom = (name: string) => (formAtom: FormAtom) =>
 // Selector atoms
 
 export const formSelectorAtom =
-  <T>(selector: (state: FormState) => T) =>
+  <T>(
+    selector: (state: InternalFormState) => T,
+    isEqual?: (a: T, b: T) => boolean
+  ) =>
   (formAtom: FormAtom) =>
-    selectAtom(formAtom, selector);
+    selectAtom(formAtom, selector, isEqual);
 
 export const fieldErrorsAtom = formSelectorAtom((state) => state.fieldErrors);
 export const touchedFieldsAtom = formSelectorAtom(
@@ -89,6 +106,21 @@ export const isValidAtom = formSelectorAtom(
   (state) => Object.keys(state.fieldErrors ?? {}).length === 0
 );
 export const isHydratedAtom = formSelectorAtom((state) => state.hydrated);
+
+// Subset of form state intended for consumption be user code
+export const formStateAtom = formSelectorAtom(
+  (state) => ({
+    fieldErrors: state.fieldErrors ?? {},
+    isSubmitting: state.isSubmitting,
+    hasBeenSubmitted: state.hasBeenSubmitted,
+    touchedFields: state.touchedFields,
+    defaultValues: state.defaultValues ?? {},
+    action: state.action,
+    subaction: state.subaction,
+    isValid: Object.keys(state.fieldErrors ?? {}).length === 0,
+  }),
+  isEqual
+);
 
 // Update atoms
 
@@ -179,8 +211,8 @@ type SyncFormContextArgs = {
   defaultValues?: { [fieldName: string]: any };
   action?: string;
   subaction?: string;
-  validateField: FormState["validateField"];
-  registerReceiveFocus: FormState["registerReceiveFocus"];
+  validateField: InternalFormState["validateField"];
+  registerReceiveFocus: InternalFormState["registerReceiveFocus"];
   formAtom: FormAtom;
 };
 export const syncFormContextAtom = atom(

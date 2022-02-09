@@ -2,7 +2,6 @@ import { useActionData, useMatches, useTransition } from "@remix-run/react";
 import { Atom } from "jotai";
 import { useAtomValue, useUpdateAtom } from "jotai/utils";
 import lodashGet from "lodash/get";
-import identity from "lodash/identity";
 import { useCallback, useContext, useMemo } from "react";
 import { ValidationErrorResponseData } from "..";
 import { formDefaultValuesKey } from "./constants";
@@ -48,11 +47,16 @@ export const useContextSelectAtom = <T>(
   return useAtomValue(selectorAtom, ATOM_SCOPE);
 };
 
+export const simpleHydratable = <T>(
+  val: T | typeof USE_HYDRATED_STATE,
+  backup: T
+) => (val === USE_HYDRATED_STATE ? backup : val);
+
 export const useHydratableSelector = <T, U>(
   { formId }: InternalFormContextValue,
   atomCreator: FormSelectorAtomCreator<T>,
   dataToUse: U | typeof USE_HYDRATED_STATE,
-  selector: (data: U) => T = identity
+  selector: (data: U) => T
 ) => {
   const dataFromState = useContextSelectAtom(formId, atomCreator);
   return dataToUse === USE_HYDRATED_STATE ? dataFromState : selector(dataToUse);
