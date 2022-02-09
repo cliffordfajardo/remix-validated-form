@@ -151,10 +151,7 @@ export const useFieldError = (
   const fieldErrors = useFieldErrorsForForm(context);
   const atomCreator = useMemo(() => fieldErrorAtom(name), [name]);
   const state = useContextSelectAtom(context.formId, atomCreator);
-  return fieldErrors.hydrateOrSelect(
-    state,
-    (fieldErrors) => fieldErrors?.[name]
-  );
+  return fieldErrors.map((fieldErrors) => fieldErrors?.[name]).hydrateTo(state);
 };
 
 export const useFieldDefaultValue = (
@@ -164,7 +161,7 @@ export const useFieldDefaultValue = (
   const defaultValues = useDefaultValuesForForm(context);
   const atomCreator = useMemo(() => fieldDefaultValueAtom(name), [name]);
   const state = useContextSelectAtom(context.formId, atomCreator);
-  return defaultValues.hydrateOrSelect(state, (val) => lodashGet(val, name));
+  return defaultValues.map((val) => lodashGet(val, name)).hydrateTo(state);
 };
 
 export const useFormUpdateAtom: typeof useUpdateAtom = (atom) =>
