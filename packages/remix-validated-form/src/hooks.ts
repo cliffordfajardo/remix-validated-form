@@ -14,7 +14,6 @@ import {
   useSetTouched,
   useDefaultValuesForForm,
   useFieldErrorsForForm,
-  simpleHydratable,
 } from "./internal/hooks";
 import {
   FormState,
@@ -59,11 +58,8 @@ export const useFormState = (formId?: string): FormState => {
   const defaultValuesToUse = useDefaultValuesForForm(formContext);
   const fieldErrorsToUse = useFieldErrorsForForm(formContext);
 
-  const defaultValues = simpleHydratable(
-    defaultValuesToUse,
-    formState.defaultValues
-  );
-  const fieldErrors = simpleHydratable(fieldErrorsToUse, formState.fieldErrors);
+  const defaultValues = defaultValuesToUse.hydrateTo(formState.defaultValues);
+  const fieldErrors = fieldErrorsToUse.hydrateTo(formState.fieldErrors);
 
   return useMemo(
     () => ({ ...formState, defaultValues, fieldErrors: fieldErrors ?? {} }),
