@@ -12,8 +12,13 @@ import {
   useContextSelectAtom,
   useClearError,
   useSetTouched,
+  useDefaultValuesForForm,
+  useFieldErrorsForForm,
+  simpleHydratable,
 } from "./internal/hooks";
 import {
+  FormState,
+  formStateAtom,
   hasBeenSubmittedAtom,
   isSubmittingAtom,
   isValidAtom,
@@ -41,6 +46,67 @@ export const useIsSubmitting = (formId?: string) => {
 export const useIsValid = (formId?: string) => {
   const formContext = useInternalFormContext(formId, "useIsValid");
   return useContextSelectAtom(formContext.formId, isValidAtom);
+};
+
+/**
+ * Returns information about the form.
+ *
+ * @param formId the id of the form. Only necessary if being used outside a ValidatedForm.
+ */
+export const useFormState = (formId?: string): FormState => {
+  const formContext = useInternalFormContext(formId, "useIsValid");
+  const formState = useContextSelectAtom(formContext.formId, formStateAtom);
+  const defaultValuesToUse = useDefaultValuesForForm(formContext);
+  const fieldErrorsToUse = useFieldErrorsForForm(formContext);
+
+  const defaultValues = simpleHydratable(
+    defaultValuesToUse,
+    formState.defaultValues
+  );
+  const fieldErrors = simpleHydratable(fieldErrorsToUse, formState.fieldErrors);
+
+  return useMemo(
+    () => ({ ...formState, defaultValues, fieldErrors: fieldErrors ?? {} }),
+    [defaultValues, fieldErrors, formState]
+  );
+};
+
+export type FormHelpers = {
+  /**
+   * Clear the error of the specified field.
+   */
+  clearError: (fieldName: string) => void;
+  /**
+   * Validate the specified field.
+   */
+  validateField: (fieldName: string) => Promise<string | null>;
+  /**
+   * Change the touched state of the specified field.
+   */
+  setTouched: (fieldName: string, touched: boolean) => void;
+};
+
+/**
+ * Returns helpers that can be used to update the form state.
+ *
+ * @param formId the id of the form. Only necessary if being used outside a ValidatedForm.
+ */
+export const useFormHelpers = (formId?: string) => {
+  const formContext = useInternalFormContext(formId, "useFormHelpers");
+  const setTouched = useSetTouched(formContext);
+  const validateField = useContextSelectAtom(
+    formContext.formId,
+    validateFieldAtom
+  );
+  const clearError = useClearError(formContext);
+  return useMemo(
+    () => ({
+      setTouched,
+      validateField,
+      clearError,
+    }),
+    [clearError, setTouched, validateField]
+  );
 };
 
 export type FieldProps = {

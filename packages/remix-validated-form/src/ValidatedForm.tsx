@@ -29,7 +29,7 @@ import {
   clearErrorAtom,
   endSubmitAtom,
   formRegistry,
-  FormState,
+  InternalFormState,
   resetAtom,
   setFieldErrorsAtom,
   startSubmitAtom,
@@ -246,7 +246,7 @@ export function ValidatedForm<DataType>({
   const endSubmit = useFormUpdateAtom(endSubmitAtom);
   const syncFormContext = useFormUpdateAtom(syncFormContextAtom);
 
-  const validateField: FormState["validateField"] = useCallback(
+  const validateField: InternalFormState["validateField"] = useCallback(
     async (fieldName) => {
       invariant(formRef.current, "Cannot find reference to form");
       const { error } = await validator.validateField(
@@ -266,15 +266,16 @@ export function ValidatedForm<DataType>({
   );
 
   const customFocusHandlers = useMultiValueMap<string, () => void>();
-  const registerReceiveFocus: FormState["registerReceiveFocus"] = useCallback(
-    (fieldName, handler) => {
-      customFocusHandlers().add(fieldName, handler);
-      return () => {
-        customFocusHandlers().remove(fieldName, handler);
-      };
-    },
-    [customFocusHandlers]
-  );
+  const registerReceiveFocus: InternalFormState["registerReceiveFocus"] =
+    useCallback(
+      (fieldName, handler) => {
+        customFocusHandlers().add(fieldName, handler);
+        return () => {
+          customFocusHandlers().remove(fieldName, handler);
+        };
+      },
+      [customFocusHandlers]
+    );
 
   useLayoutEffect(() => {
     syncFormContext({
