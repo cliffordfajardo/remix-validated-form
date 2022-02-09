@@ -5,17 +5,17 @@
  */
 export type Hydratable<T> = {
   hydrateTo: (data: T) => T;
-  hydrateOrSelect: <U>(data: U, selector: (val: T) => U) => U;
+  map: <U>(fn: (data: T) => U) => Hydratable<U>;
 };
 
-const serverData = <T>(serverData: T): Hydratable<T> => ({
-  hydrateTo: () => serverData,
-  hydrateOrSelect: (_, selector) => selector(serverData),
+const serverData = <T>(data: T): Hydratable<T> => ({
+  hydrateTo: () => data,
+  map: (fn) => serverData(fn(data)),
 });
 
 const hydratedData = <T>(): Hydratable<T> => ({
   hydrateTo: (hydratedData: T) => hydratedData,
-  hydrateOrSelect: (data) => data,
+  map: <U>() => hydratedData<U>(),
 });
 
 const from = <T>(data: T, hydrated: boolean): Hydratable<T> =>
