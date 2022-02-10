@@ -79,10 +79,13 @@ export const setTouchedAtom = atomFamily((formId: InternalFormId) =>
   atom(
     null,
     (get, set, { field, touched }: { field: string; touched: boolean }) => {
-      set(touchedFieldsAtom(formId), {
-        ...get(touchedFieldsAtom(formId)),
-        [field]: touched,
-      });
+      const prev = get(touchedFieldsAtom(formId));
+      if (prev[field] !== touched) {
+        set(touchedFieldsAtom(formId), {
+          ...prev,
+          [field]: touched,
+        });
+      }
     }
   )
 );
@@ -95,9 +98,12 @@ export const setFieldErrorAtom = atomFamily((formId: InternalFormId) =>
       set,
       { field, error }: { field: string; error: string | undefined }
     ) => {
-      if (error === undefined) {
-        set(fieldErrorsAtom(formId), omit(get(fieldErrorsAtom(formId))));
-      } else {
+      const prev = get(fieldErrorsAtom(formId));
+      if (error === undefined && field in prev) {
+        set(fieldErrorsAtom(formId), omit(prev, field));
+      }
+
+      if (error !== undefined && prev[field] !== error) {
         set(fieldErrorsAtom(formId), {
           ...get(fieldErrorsAtom(formId)),
           [field]: error,
