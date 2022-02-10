@@ -26,15 +26,15 @@ import {
 import { setInputValueInForm } from "./internal/logic/setInputValueInForm";
 import { MultiValueMap, useMultiValueMap } from "./internal/MultiValueMap";
 import {
-  addErrorAtom,
-  clearErrorAtom,
+  cleanupFormState,
   endSubmitAtom,
-  formRegistry,
-  InternalFormState,
+  fieldErrorsAtom,
+  formPropsAtom,
+  isHydratedAtom,
   resetAtom,
-  setFieldErrorsAtom,
+  setFieldErrorAtom,
   startSubmitAtom,
-  syncFormContextAtom,
+  SyncedFormProps,
 } from "./internal/state";
 import { useSubmitComplete } from "./internal/submissionCallbacks";
 import {
@@ -193,12 +193,6 @@ function formEventProxy<T extends object>(event: T): T {
   }) as T;
 }
 
-const useFormAtom = (formId: string | symbol) => {
-  const formAtom = formRegistry(formId);
-  useEffect(() => () => formRegistry.remove(formId), [formId]);
-  return formAtom;
-};
-
 /**
  * The primary form component of `remix-validated-form`.
  */
@@ -220,7 +214,6 @@ export function ValidatedForm<DataType>({
   ...rest
 }: FormProps<DataType>) {
   const formId = useFormId(id);
-  const formAtom = useFormAtom(formId);
   const providedDefaultValues = useDeepEqualsMemo(unMemoizedDefaults);
   const contextValue = useMemo<InternalFormContextValue>(
     () => ({
@@ -239,35 +232,40 @@ export function ValidatedForm<DataType>({
   const Form = fetcher?.Form ?? RemixForm;
 
   const submit = useSubmit();
-  const clearError = useFormUpdateAtom(clearErrorAtom);
-  const addError = useFormUpdateAtom(addErrorAtom);
-  const setFieldErrors = useFormUpdateAtom(setFieldErrorsAtom);
-  const reset = useFormUpdateAtom(resetAtom);
-  const startSubmit = useFormUpdateAtom(startSubmitAtom);
-  const endSubmit = useFormUpdateAtom(endSubmitAtom);
-  const syncFormContext = useFormUpdateAtom(syncFormContextAtom);
+  const setFieldErrors = useFormUpdateAtom(fieldErrorsAtom(formId));
+  const setFieldError = useFormUpdateAtom(setFieldErrorAtom(formId));
+  const reset = useFormUpdateAtom(resetAtom(formId));
+  const startSubmit = useFormUpdateAtom(startSubmitAtom(formId));
+  const endSubmit = useFormUpdateAtom(endSubmitAtom(formId));
+  const syncFormProps = useFormUpdateAtom(formPropsAtom(formId));
+  const setHydrated = useFormUpdateAtom(isHydratedAtom(formId));
 
-  const validateField: InternalFormState["validateField"] = useCallback(
-    async (fieldName) => {
+  useEffect(() => {
+    setHydrated(true);
+    return () => cleanupFormState(formId);
+  }, [formId, setHydrated]);
+
+  const validateField: SyncedFormProps["validateField"] = useCallback(
+    async (field) => {
       invariant(formRef.current, "Cannot find reference to form");
       const { error } = await validator.validateField(
         getDataFromForm(formRef.current),
-        fieldName as any
+        field
       );
 
       if (error) {
-        addError({ formAtom, name: fieldName, error });
+        setFieldError({ field, error });
         return error;
       } else {
-        clearError({ name: fieldName, formAtom });
+        setFieldError({ field, error: undefined });
         return null;
       }
     },
-    [addError, clearError, formAtom, validator]
+    [setFieldError, validator]
   );
 
   const customFocusHandlers = useMultiValueMap<string, () => void>();
-  const registerReceiveFocus: InternalFormState["registerReceiveFocus"] =
+  const registerReceiveFocus: SyncedFormProps["registerReceiveFocus"] =
     useCallback(
       (fieldName, handler) => {
         customFocusHandlers().add(fieldName, handler);
@@ -278,7 +276,7 @@ export function ValidatedForm<DataType>({
       [customFocusHandlers]
     );
 
-  const setFieldValueForForm: InternalFormState["setFieldValue"] = useCallback(
+  const setFieldValue: SyncedFormProps["setFieldValue"] = useCallback(
     (fieldName, value) => {
       invariant(
         formRef.current,
@@ -290,36 +288,31 @@ export function ValidatedForm<DataType>({
   );
 
   useLayoutEffect(() => {
-    syncFormContext({
-      formAtom,
+    syncFormProps({
       action,
       defaultValues: providedDefaultValues ?? backendDefaultValues,
       subaction,
       validateField,
       registerReceiveFocus,
-      setFieldValueForForm,
+      setFieldValue,
     });
   }, [
     action,
-    formAtom,
     providedDefaultValues,
     registerReceiveFocus,
     subaction,
-    syncFormContext,
+    syncFormProps,
     validateField,
     backendDefaultValues,
-    setFieldValueForForm,
+    setFieldValue,
   ]);
 
   useEffect(() => {
-    setFieldErrors({
-      fieldErrors: backendError?.fieldErrors ?? {},
-      formAtom,
-    });
-  }, [backendError?.fieldErrors, formAtom, setFieldErrors]);
+    setFieldErrors(backendError?.fieldErrors ?? {});
+  }, [backendError?.fieldErrors, setFieldErrors, setFieldError]);
 
   useSubmitComplete(hasActiveSubmission, () => {
-    endSubmit({ formAtom });
+    endSubmit();
   });
 
   let clickedButtonRef = React.useRef<any>();
@@ -349,11 +342,11 @@ export function ValidatedForm<DataType>({
   }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    startSubmit({ formAtom });
+    startSubmit();
     const result = await validator.validate(getDataFromForm(e.currentTarget));
     if (result.error) {
-      endSubmit({ formAtom });
-      setFieldErrors({ fieldErrors: result.error.fieldErrors, formAtom });
+      endSubmit();
+      setFieldErrors(result.error.fieldErrors);
       if (!disableFocusOnError) {
         focusFirstInvalidInput(
           result.error.fieldErrors,
@@ -365,7 +358,7 @@ export function ValidatedForm<DataType>({
       const eventProxy = formEventProxy(e);
       await onSubmit?.(result.data, eventProxy);
       if (eventProxy.defaultPrevented) {
-        endSubmit({ formAtom });
+        endSubmit();
         return;
       }
 
@@ -394,7 +387,7 @@ export function ValidatedForm<DataType>({
       onReset={(event) => {
         onReset?.(event);
         if (event.defaultPrevented) return;
-        reset({ formAtom });
+        reset();
       }}
     >
       <InternalFormContext.Provider value={contextValue}>
