@@ -55,6 +55,8 @@ export type FormContextValue = {
 };
 
 /**
+ * @deprecated in favor of `useFormState` and `useFormHelpers`
+ *
  * Provides access to some of the internal state of the form.
  */
 export const useFormContext = (formId?: string): FormContextValue => {

@@ -44,7 +44,7 @@ const setElementValue = (element: Node, value: unknown, name: string) => {
   input.value = value;
 };
 
-export const setFieldValue = (
+export const setInputValueInForm = (
   formElement: HTMLFormElement,
   name: string,
   value: unknown

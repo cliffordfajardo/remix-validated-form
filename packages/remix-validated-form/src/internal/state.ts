@@ -24,6 +24,7 @@ export type InternalFormState = {
   // Internal
   validateField: (fieldName: string) => Promise<string | null>;
   registerReceiveFocus: (fieldName: string, handler: () => void) => () => void;
+  setFieldValue: (fieldName: string, value: unknown) => void;
 };
 
 export type FormState = {
@@ -58,6 +59,7 @@ export const formRegistry = atomFamily((formId: string | symbol) =>
     // Will change upon hydration -- these will never actually be used
     validateField: () => Promise.resolve(null),
     registerReceiveFocus: () => () => {},
+    setFieldValue: () => {},
   })
 );
 
@@ -106,6 +108,9 @@ export const isValidAtom = formSelectorAtom(
   (state) => Object.keys(state.fieldErrors ?? {}).length === 0
 );
 export const isHydratedAtom = formSelectorAtom((state) => state.hydrated);
+export const setFieldValueAtom = formSelectorAtom(
+  (state) => state.setFieldValue
+);
 
 // Subset of form state intended for consumption be user code
 export const formStateAtom = formSelectorAtom(
@@ -213,6 +218,7 @@ type SyncFormContextArgs = {
   subaction?: string;
   validateField: InternalFormState["validateField"];
   registerReceiveFocus: InternalFormState["registerReceiveFocus"];
+  setFieldValueForForm: InternalFormState["setFieldValue"];
   formAtom: FormAtom;
 };
 export const syncFormContextAtom = atom(
@@ -227,6 +233,7 @@ export const syncFormContextAtom = atom(
       formAtom,
       validateField,
       registerReceiveFocus,
+      setFieldValueForForm,
     }: SyncFormContextArgs
   ) => {
     set(formAtom, (state) => {
@@ -236,6 +243,7 @@ export const syncFormContextAtom = atom(
       state.registerReceiveFocus = registerReceiveFocus;
       state.validateField = validateField;
       state.hydrated = true;
+      state.setFieldValue = setFieldValueForForm;
       return state;
     });
   }

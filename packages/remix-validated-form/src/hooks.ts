@@ -22,6 +22,7 @@ import {
   isSubmittingAtom,
   isValidAtom,
   registerReceiveFocusAtom,
+  setFieldValueAtom,
   validateFieldAtom,
 } from "./internal/state";
 
@@ -95,13 +96,18 @@ export const useFormHelpers = (formId?: string) => {
     validateFieldAtom
   );
   const clearError = useClearError(formContext);
+  const setFieldValue = useContextSelectAtom(
+    formContext.formId,
+    setFieldValueAtom
+  );
   return useMemo(
     () => ({
       setTouched,
       validateField,
       clearError,
+      setFieldValue,
     }),
-    [clearError, setTouched, validateField]
+    [clearError, setFieldValue, setTouched, validateField]
   );
 };
 

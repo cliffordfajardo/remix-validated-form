@@ -23,6 +23,7 @@ import {
   useFormUpdateAtom,
   useHasActiveFormSubmit,
 } from "./internal/hooks";
+import { setInputValueInForm } from "./internal/logic/setInputValueInForm";
 import { MultiValueMap, useMultiValueMap } from "./internal/MultiValueMap";
 import {
   addErrorAtom,
@@ -277,6 +278,17 @@ export function ValidatedForm<DataType>({
       [customFocusHandlers]
     );
 
+  const setFieldValueForForm: InternalFormState["setFieldValue"] = useCallback(
+    (fieldName, value) => {
+      invariant(
+        formRef.current,
+        "Unable to find form element. This is likely a bug in remix-validated-form."
+      );
+      setInputValueInForm(formRef.current, fieldName, value);
+    },
+    []
+  );
+
   useLayoutEffect(() => {
     syncFormContext({
       formAtom,
@@ -285,6 +297,7 @@ export function ValidatedForm<DataType>({
       subaction,
       validateField,
       registerReceiveFocus,
+      setFieldValueForForm,
     });
   }, [
     action,
@@ -295,6 +308,7 @@ export function ValidatedForm<DataType>({
     syncFormContext,
     validateField,
     backendDefaultValues,
+    setFieldValueForForm,
   ]);
 
   useEffect(() => {

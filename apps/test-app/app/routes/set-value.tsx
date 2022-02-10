@@ -1,6 +1,6 @@
 import { withZod } from "@remix-validated-form/with-zod";
 import { useState } from "react";
-import { useField, useFormContext, ValidatedForm } from "remix-validated-form";
+import { useField, useFormHelpers, ValidatedForm } from "remix-validated-form";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { Fieldset } from "~/components/Fieldset";
@@ -28,18 +28,17 @@ const validator = withZod(
 );
 
 const SetValuesButton = () => {
-  const { setFieldValue } = useFormContext();
+  const { setFieldValue } = useFormHelpers();
   return (
     <button
       type="button"
       onClick={() => {
-        const form = document.getElementById("test-form") as HTMLFormElement;
-        setFieldValue(form, "textField", "new value");
-        setFieldValue(form, "controlled", "some value");
-        setFieldValue(form, "checkbox", true);
-        setFieldValue(form, "checkboxGroup", ["value1", "value2"]);
-        setFieldValue(form, "radioGroup", "value2");
-        setFieldValue(form, "complex", { year: 2021, month: 12, day: 13 });
+        setFieldValue("textField", "new value");
+        setFieldValue("controlled", "some value");
+        setFieldValue("checkbox", true);
+        setFieldValue("checkboxGroup", ["value1", "value2"]);
+        setFieldValue("radioGroup", "value2");
+        setFieldValue("complex", { year: 2021, month: 12, day: 13 });
       }}
     >
       Set values
