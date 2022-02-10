@@ -290,7 +290,7 @@ export function ValidatedForm<DataType>({
   useLayoutEffect(() => {
     syncFormProps({
       action,
-      defaultValues: providedDefaultValues ?? backendDefaultValues,
+      defaultValues: providedDefaultValues ?? backendDefaultValues ?? {},
       subaction,
       validateField,
       registerReceiveFocus,
