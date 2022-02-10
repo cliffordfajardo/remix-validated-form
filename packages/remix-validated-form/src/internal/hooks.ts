@@ -157,7 +157,9 @@ export const useFieldDefaultValue = (
   const { defaultValues: state } = useFormAtomValue(
     formPropsAtom(context.formId)
   );
-  return defaultValues.map((val) => lodashGet(val, name)).hydrateTo(state);
+  return defaultValues
+    .map((val) => lodashGet(val, name))
+    .hydrateTo(state[name]);
 };
 
 export const useClearError = ({ formId }: InternalFormContextValue) => {
