@@ -1,4 +1,5 @@
 import { Form as RemixForm, useFetcher, useSubmit } from "@remix-run/react";
+import { Atom } from "jotai";
 import uniq from "lodash/uniq";
 import React, {
   ComponentProps,
@@ -20,6 +21,8 @@ import {
 import {
   useDefaultValuesFromLoader,
   useErrorResponseForForm,
+  useFieldDefaultValue,
+  useFormAtomValue,
   useFormUpdateAtom,
   useHasActiveFormSubmit,
 } from "./internal/hooks";
@@ -29,7 +32,9 @@ import {
   cleanupFormState,
   endSubmitAtom,
   fieldErrorsAtom,
+  fieldValuesAtom,
   formPropsAtom,
+  InternalFormId,
   isHydratedAtom,
   resetAtom,
   setFieldErrorAtom,
@@ -192,6 +197,42 @@ function formEventProxy<T extends object>(event: T): T {
     },
   }) as T;
 }
+
+const ControlledField = ({
+  name,
+  valueAtom,
+  formId,
+}: {
+  name: string;
+  valueAtom: Atom<unknown>;
+  formId: InternalFormId;
+}) => {
+  const value = useFormAtomValue(valueAtom);
+  const defaultValue = useFieldDefaultValue(name, { formId });
+  return (
+    <input
+      type="hidden"
+      name={name}
+      value={(value as string) ?? defaultValue}
+    />
+  );
+};
+
+const ControlledFieldValues = ({ formId }: { formId: InternalFormId }) => {
+  const controlledFieldValues = useFormAtomValue(fieldValuesAtom(formId));
+  return (
+    <>
+      {Object.entries(controlledFieldValues).map(([name, valueAtom]) => (
+        <ControlledField
+          key={name}
+          name={name}
+          valueAtom={valueAtom}
+          formId={formId}
+        />
+      ))}
+    </>
+  );
+};
 
 /**
  * The primary form component of `remix-validated-form`.
@@ -392,6 +433,7 @@ export function ValidatedForm<DataType>({
     >
       <InternalFormContext.Provider value={contextValue}>
         <FormResetter formRef={formRef} resetAfterSubmit={resetAfterSubmit} />
+        <ControlledFieldValues formId={formId} />
         {subaction && (
           <input type="hidden" value={subaction} name="subaction" />
         )}

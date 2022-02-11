@@ -1,4 +1,4 @@
-import { Atom, atom } from "jotai";
+import { Atom, atom, PrimitiveAtom } from "jotai";
 import { atomFamily, selectAtom } from "jotai/utils";
 import isEqual from "lodash/isEqual";
 import omit from "lodash/omit";
@@ -21,6 +21,11 @@ export type SyncedFormProps = {
 const formAtomFamily = <T>(data: T) =>
   atomFamily((_: InternalFormId) => atom(data));
 
+type FieldAtomKey = { formId: InternalFormId; field: string };
+const fieldAtomFamily = <T extends Atom<unknown>>(
+  func: (key: FieldAtomKey) => T
+) => atomFamily(func, isEqual);
+
 export const isHydratedAtom = formAtomFamily(false);
 export const isSubmittingAtom = formAtomFamily(false);
 export const hasBeenSubmittedAtom = formAtomFamily(false);
@@ -32,10 +37,10 @@ export const formPropsAtom = formAtomFamily<SyncedFormProps>({
   setFieldValue: () => {},
   defaultValues: {},
 });
-
-if (typeof window !== "undefined") {
-  (window as any).fieldErrorsAtom = fieldErrorsAtom;
-}
+export const fieldValuesAtom = formAtomFamily<{
+  [fieldName: string]: PrimitiveAtom<unknown>;
+}>({});
+export const fieldValueAtom = fieldAtomFamily(() => atom<unknown>(undefined));
 
 //// Everything below is derived from the above
 
@@ -114,11 +119,6 @@ export const setFieldErrorAtom = atomFamily((formId: InternalFormId) =>
 );
 
 //// Field specific
-
-type FieldAtomKey = { formId: InternalFormId; field: string };
-const fieldAtomFamily = <T extends Atom<unknown>>(
-  func: (key: FieldAtomKey) => T
-) => atomFamily(func, isEqual);
 
 export const fieldTouchedAtom = fieldAtomFamily(({ formId, field }) =>
   atom(

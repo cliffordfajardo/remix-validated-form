@@ -1,3 +1,4 @@
+import omit from "lodash/omit";
 import { useEffect, useMemo } from "react";
 import {
   createGetInputProps,
@@ -14,9 +15,13 @@ import {
   useDefaultValuesForForm,
   useFieldErrorsForForm,
   useFormAtomValue,
+  useFormAtom,
+  useFormUpdateAtom,
 } from "./internal/hooks";
 import {
   fieldErrorsAtom,
+  fieldValueAtom,
+  fieldValuesAtom,
   formPropsAtom,
   hasBeenSubmittedAtom,
   isSubmittingAtom,
@@ -249,6 +254,122 @@ export const useField = (
     setError,
     validateField,
   ]);
+
+  return field;
+};
+
+export type ControlledFieldProps<T> = {
+  /**
+   * The current value of the field.
+   */
+  value: T;
+  /**
+   * Helper to set the value of the field.
+   */
+  setValue: (nextValue: T) => void;
+  /**
+   * The validation error message if there is one.
+   */
+  error?: string;
+  /**
+   * Clears the error message.
+   */
+  clearError: () => void;
+  /**
+   * Validates the field.
+   */
+  validate: () => void;
+  /**
+   * Whether or not the field has been touched.
+   */
+  touched: boolean;
+  /**
+   * Helper to set the touched state of the field.
+   */
+  setTouched: (touched: boolean) => void;
+};
+
+/**
+ * An alternative to `useField` specifically for controlled components that don't use a
+ * named input element.
+ */
+export const useControlledField = <T = unknown>(
+  name: string,
+  options?: {
+    /**
+     * Allows you to configure a custom function that will be called
+     * when the input needs to receive focus due to a validation error.
+     * This is useful for custom components that use a hidden input.
+     */
+    handleReceiveFocus?: () => void;
+    /**
+     * The formId of the form you want to use.
+     * This is not necesary if the input is used inside a form.
+     */
+    formId?: string;
+  }
+) => {
+  const { handleReceiveFocus, formId: providedFormId } = options ?? {};
+  const formContext = useInternalFormContext(providedFormId, "useField");
+
+  const fieldAtom = fieldValueAtom({ field: name, formId: formContext.formId });
+  const [value, setValue] = useFormAtom(fieldAtom);
+  const updateFieldValues = useFormUpdateAtom(
+    fieldValuesAtom(formContext.formId)
+  );
+
+  useEffect(() => {
+    updateFieldValues((prev) => {
+      if (name in prev) return prev;
+      return {
+        ...prev,
+        [name]: fieldAtom,
+      };
+    });
+
+    return () => {
+      updateFieldValues((prev) => omit(prev, name));
+      fieldValueAtom.remove({ field: name, formId: formContext.formId });
+    };
+  }, [fieldAtom, formContext.formId, name, updateFieldValues]);
+
+  const defaultValue = useFieldDefaultValue(name, formContext);
+  const [touched, setTouched] = useFieldTouched(name, formContext);
+  const [error, setError] = useFieldError(name, formContext);
+
+  const { validateField, registerReceiveFocus } = useFormAtomValue(
+    formPropsAtom(formContext.formId)
+  );
+
+  useEffect(() => {
+    if (handleReceiveFocus)
+      return registerReceiveFocus(name, handleReceiveFocus);
+  }, [handleReceiveFocus, name, registerReceiveFocus]);
+
+  const field = useMemo<ControlledFieldProps<T>>(
+    () => ({
+      error,
+      clearError: () => setError(undefined),
+      validate: () => {
+        validateField(name);
+      },
+      touched,
+      setTouched,
+      value: (value as T) ?? defaultValue,
+      setValue,
+    }),
+    [
+      error,
+      touched,
+      setTouched,
+      value,
+      defaultValue,
+      setValue,
+      setError,
+      validateField,
+      name,
+    ]
+  );
 
   return field;
 };
