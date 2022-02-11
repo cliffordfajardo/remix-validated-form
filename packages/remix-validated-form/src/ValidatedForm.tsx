@@ -32,15 +32,15 @@ import {
   cleanupFormState,
   endSubmitAtom,
   fieldErrorsAtom,
-  fieldValuesAtom,
   formPropsAtom,
-  InternalFormId,
   isHydratedAtom,
   resetAtom,
   setFieldErrorAtom,
   startSubmitAtom,
   SyncedFormProps,
 } from "./internal/state";
+import { InternalFormId } from "./internal/state/atomUtils";
+import { useAllControlledFields } from "./internal/state/controlledFields";
 import { useSubmitComplete } from "./internal/submissionCallbacks";
 import {
   mergeRefs,
@@ -219,7 +219,7 @@ const ControlledField = ({
 };
 
 const ControlledFieldValues = ({ formId }: { formId: InternalFormId }) => {
-  const controlledFieldValues = useFormAtomValue(fieldValuesAtom(formId));
+  const controlledFieldValues = useAllControlledFields(formId);
   return (
     <>
       {Object.entries(controlledFieldValues).map(([name, valueAtom]) => (

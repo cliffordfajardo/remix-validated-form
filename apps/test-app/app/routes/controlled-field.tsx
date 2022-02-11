@@ -1,4 +1,5 @@
 import { withZod } from "@remix-validated-form/with-zod";
+import { useState } from "react";
 import { ActionFunction, useActionData } from "remix";
 import {
   ValidatedForm,
@@ -23,7 +24,7 @@ export const action: ActionFunction = async ({ request }) => {
 const Controlled = () => {
   const { value, setValue } = useControlledField("myField");
   return (
-    <>
+    <div>
       <button type="button" onClick={() => setValue("blue")}>
         Blue {value === "blue" && "(selected)"}
       </button>
@@ -33,12 +34,20 @@ const Controlled = () => {
       <button type="button" onClick={() => setValue("yellow")}>
         Yellow {value === "yellow" && "(selected)"}
       </button>
-    </>
+    </div>
   );
 };
 
+function* range(min: number, max: number) {
+  for (let i = min; i < max; i++) {
+    yield i;
+  }
+}
+
 export default function ControlledField() {
   const data = useActionData();
+  const [max, setMax] = useState(0);
+  const [min, setMin] = useState(0);
   return (
     <ValidatedForm
       validator={validator}
@@ -46,10 +55,18 @@ export default function ControlledField() {
       defaultValues={{ myField: "green" }}
     >
       {data?.message && <div>{data.message}</div>}
-      <Controlled />
-      <div>
-        <SubmitButton />
+      <div style={{ margin: "1rem" }}>
+        <button type="button" onClick={() => setMax((prev) => prev + 1)}>
+          +
+        </button>
+        <button type="button" onClick={() => setMin((prev) => prev + 1)}>
+          -
+        </button>
       </div>
+      {[...range(min, max)].map((_, i) => (
+        <Controlled key={i} />
+      ))}
+      <SubmitButton />
     </ValidatedForm>
   );
 }

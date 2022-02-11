@@ -1,12 +1,14 @@
-import { Atom, atom, PrimitiveAtom } from "jotai";
+import { atom } from "jotai";
 import { atomFamily, selectAtom } from "jotai/utils";
-import isEqual from "lodash/isEqual";
 import omit from "lodash/omit";
 import { FieldErrors, TouchedFields } from "../validation/types";
+import {
+  fieldAtomFamily,
+  formAtomFamily,
+  InternalFormId,
+} from "./state/atomUtils";
 
 export const ATOM_SCOPE = Symbol("remix-validated-form-scope");
-
-export type InternalFormId = string | symbol;
 
 export type SyncedFormProps = {
   formId?: string;
@@ -17,14 +19,6 @@ export type SyncedFormProps = {
   registerReceiveFocus: (fieldName: string, handler: () => void) => () => void;
   setFieldValue: (fieldName: string, value: unknown) => void;
 };
-
-const formAtomFamily = <T>(data: T) =>
-  atomFamily((_: InternalFormId) => atom(data));
-
-type FieldAtomKey = { formId: InternalFormId; field: string };
-const fieldAtomFamily = <T extends Atom<unknown>>(
-  func: (key: FieldAtomKey) => T
-) => atomFamily(func, isEqual);
 
 export const isHydratedAtom = formAtomFamily(false);
 export const isSubmittingAtom = formAtomFamily(false);
@@ -37,10 +31,6 @@ export const formPropsAtom = formAtomFamily<SyncedFormProps>({
   setFieldValue: () => {},
   defaultValues: {},
 });
-export const fieldValuesAtom = formAtomFamily<{
-  [fieldName: string]: PrimitiveAtom<unknown>;
-}>({});
-export const fieldValueAtom = fieldAtomFamily(() => atom<unknown>(undefined));
 
 //// Everything below is derived from the above
 

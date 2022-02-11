@@ -1,4 +1,3 @@
-import omit from "lodash/omit";
 import { useEffect, useMemo } from "react";
 import {
   createGetInputProps,
@@ -15,19 +14,16 @@ import {
   useDefaultValuesForForm,
   useFieldErrorsForForm,
   useFormAtomValue,
-  useFormAtom,
-  useFormUpdateAtom,
 } from "./internal/hooks";
 import {
   fieldErrorsAtom,
-  fieldValueAtom,
-  fieldValuesAtom,
   formPropsAtom,
   hasBeenSubmittedAtom,
   isSubmittingAtom,
   isValidAtom,
   touchedFieldsAtom,
 } from "./internal/state";
+import { useFieldValue } from "./internal/state/controlledFields";
 import { FieldErrors, TouchedFields } from ".";
 
 /**
@@ -312,27 +308,7 @@ export const useControlledField = <T = unknown>(
   const { handleReceiveFocus, formId: providedFormId } = options ?? {};
   const formContext = useInternalFormContext(providedFormId, "useField");
 
-  const fieldAtom = fieldValueAtom({ field: name, formId: formContext.formId });
-  const [value, setValue] = useFormAtom(fieldAtom);
-  const updateFieldValues = useFormUpdateAtom(
-    fieldValuesAtom(formContext.formId)
-  );
-
-  useEffect(() => {
-    updateFieldValues((prev) => {
-      if (name in prev) return prev;
-      return {
-        ...prev,
-        [name]: fieldAtom,
-      };
-    });
-
-    return () => {
-      updateFieldValues((prev) => omit(prev, name));
-      fieldValueAtom.remove({ field: name, formId: formContext.formId });
-    };
-  }, [fieldAtom, formContext.formId, name, updateFieldValues]);
-
+  const [value, setValue] = useFieldValue(formContext.formId, name);
   const defaultValue = useFieldDefaultValue(name, formContext);
   const [touched, setTouched] = useFieldTouched(name, formContext);
   const [error, setError] = useFieldError(name, formContext);
