@@ -25,14 +25,22 @@ const Controlled = () => {
   const { value, setValue } = useControlledField("myField");
   return (
     <div>
-      <button type="button" onClick={() => setValue("blue")}>
-        Blue {value === "blue" && "(selected)"}
+      <button type="button" onClick={() => setValue("blue")} data-testid="blue">
+        Blue{value === "blue" && " (selected)"}
       </button>
-      <button type="button" onClick={() => setValue("green")}>
-        Green {value === "green" && "(selected)"}
+      <button
+        type="button"
+        onClick={() => setValue("green")}
+        data-testid="green"
+      >
+        Green{value === "green" && " (selected)"}
       </button>
-      <button type="button" onClick={() => setValue("yellow")}>
-        Yellow {value === "yellow" && "(selected)"}
+      <button
+        type="button"
+        onClick={() => setValue("yellow")}
+        data-testid="yellow"
+      >
+        Yellow{value === "yellow" && " (selected)"}
       </button>
     </div>
   );
@@ -46,8 +54,7 @@ function* range(min: number, max: number) {
 
 export default function ControlledField() {
   const data = useActionData();
-  const [max, setMax] = useState(0);
-  const [min, setMin] = useState(0);
+  const [count, setCount] = useState(0);
   return (
     <ValidatedForm
       validator={validator}
@@ -56,14 +63,14 @@ export default function ControlledField() {
     >
       {data?.message && <div>{data.message}</div>}
       <div style={{ margin: "1rem" }}>
-        <button type="button" onClick={() => setMax((prev) => prev + 1)}>
+        <button type="button" onClick={() => setCount((prev) => prev + 1)}>
           +
         </button>
-        <button type="button" onClick={() => setMin((prev) => prev + 1)}>
+        <button type="button" onClick={() => setCount((prev) => prev - 1)}>
           -
         </button>
       </div>
-      {[...range(min, max)].map((_, i) => (
+      {[...range(0, count)].map((_, i) => (
         <Controlled key={i} />
       ))}
       <SubmitButton />
