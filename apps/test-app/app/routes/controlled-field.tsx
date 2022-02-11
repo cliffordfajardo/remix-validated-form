@@ -11,7 +11,7 @@ import { SubmitButton } from "~/components/SubmitButton";
 
 const validator = withZod(
   z.object({
-    myField: z.string(),
+    myField: z.literal("blue"),
   })
 );
 
@@ -22,7 +22,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 const Controlled = () => {
-  const { value, setValue } = useControlledField("myField");
+  const { value, setValue, error } = useControlledField("myField");
   return (
     <div>
       <button type="button" onClick={() => setValue("blue")} data-testid="blue">
@@ -42,6 +42,11 @@ const Controlled = () => {
       >
         Yellow{value === "yellow" && " (selected)"}
       </button>
+      {error && (
+        <p style={{ color: "red" }} data-testid="error">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
@@ -54,12 +59,12 @@ function* range(min: number, max: number) {
 
 export default function ControlledField() {
   const data = useActionData();
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(1);
   return (
     <ValidatedForm
       validator={validator}
       method="post"
-      defaultValues={{ myField: "green" }}
+      defaultValues={{ myField: "green" as any }}
     >
       {data?.message && <div>{data.message}</div>}
       <div style={{ margin: "1rem" }}>
