@@ -2,7 +2,7 @@ import { atom, PrimitiveAtom } from "jotai";
 import { atomFamily, useAtomCallback } from "jotai/utils";
 import { useCallback, useEffect, useState } from "react";
 import { useFormAtom, useFormAtomValue, useFormUpdateAtom } from "../hooks";
-import { ATOM_SCOPE, formPropsAtom } from "../state";
+import { ATOM_SCOPE } from "../state";
 import { formAtomFamily, InternalFormId } from "./atomUtils";
 
 type ControlledFieldState = {
@@ -67,8 +67,6 @@ export const useControllableValue = (formId: InternalFormId, field: string) => {
     register({ formId, internalFieldId, name: field });
     return () => unregister({ formId, internalFieldId, name: field });
   }, [field, formId, internalFieldId, register, unregister]);
-
-  const { validateField } = useFormAtomValue(formPropsAtom(formId));
 
   const setValueAsync = useAtomCallback(
     useCallback(
