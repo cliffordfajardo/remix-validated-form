@@ -31,6 +31,7 @@ export const formPropsAtom = formAtomFamily<SyncedFormProps>({
   setFieldValue: () => {},
   defaultValues: {},
 });
+export const formElementAtom = formAtomFamily<HTMLFormElement | null>(null);
 
 //// Everything below is derived from the above
 

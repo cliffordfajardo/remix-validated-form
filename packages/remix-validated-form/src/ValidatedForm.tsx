@@ -32,6 +32,7 @@ import {
   cleanupFormState,
   endSubmitAtom,
   fieldErrorsAtom,
+  formElementAtom,
   formPropsAtom,
   isHydratedAtom,
   resetAtom,
@@ -288,6 +289,7 @@ export function ValidatedForm<DataType>({
   const endSubmit = useFormUpdateAtom(endSubmitAtom(formId));
   const syncFormProps = useFormUpdateAtom(formPropsAtom(formId));
   const setHydrated = useFormUpdateAtom(isHydratedAtom(formId));
+  const setFormElementInState = useFormUpdateAtom(formElementAtom(formId));
 
   useEffect(() => {
     setHydrated(true);
@@ -423,7 +425,7 @@ export function ValidatedForm<DataType>({
 
   return (
     <Form
-      ref={mergeRefs([formRef, formRefProp])}
+      ref={mergeRefs([formRef, formRefProp, setFormElementInState])}
       {...rest}
       id={id}
       action={action}
