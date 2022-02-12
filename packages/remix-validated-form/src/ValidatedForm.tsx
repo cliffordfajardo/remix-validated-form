@@ -40,7 +40,10 @@ import {
   SyncedFormProps,
 } from "./internal/state";
 import { InternalFormId } from "./internal/state/atomUtils";
-import { useAllControlledFields } from "./internal/state/controlledFields";
+import {
+  useAllControlledFields,
+  useSignalUpdateComplete,
+} from "./internal/state/controlledFields";
 import { useSubmitComplete } from "./internal/submissionCallbacks";
 import {
   mergeRefs,
@@ -202,13 +205,17 @@ const ControlledField = ({
   name,
   valueAtom,
   formId,
+  internalId,
 }: {
   name: string;
   valueAtom: Atom<unknown>;
   formId: InternalFormId;
+  internalId: symbol;
 }) => {
   const value = useFormAtomValue(valueAtom);
   const defaultValue = useFieldDefaultValue(name, { formId });
+  useSignalUpdateComplete(internalId);
+
   return (
     <input
       type="hidden"
@@ -222,12 +229,13 @@ const ControlledFieldValues = ({ formId }: { formId: InternalFormId }) => {
   const controlledFieldValues = useAllControlledFields(formId);
   return (
     <>
-      {Object.entries(controlledFieldValues).map(([name, valueAtom]) => (
+      {controlledFieldValues.map(({ name, valueAtom, internalId }) => (
         <ControlledField
           key={name}
           name={name}
           valueAtom={valueAtom}
           formId={formId}
+          internalId={internalId}
         />
       ))}
     </>

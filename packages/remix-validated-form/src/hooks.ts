@@ -23,7 +23,7 @@ import {
   isValidAtom,
   touchedFieldsAtom,
 } from "./internal/state";
-import { useFieldValue } from "./internal/state/controlledFields";
+import { useControllableValue } from "./internal/state/controlledFields";
 import { FieldErrors, TouchedFields } from ".";
 
 /**
@@ -308,7 +308,7 @@ export const useControlledField = <T = unknown>(
   const { handleReceiveFocus, formId: providedFormId } = options ?? {};
   const formContext = useInternalFormContext(providedFormId, "useField");
 
-  const [value, setValue] = useFieldValue(formContext.formId, name);
+  const [value, setValue] = useControllableValue(formContext.formId, name);
   const defaultValue = useFieldDefaultValue(name, formContext);
   const [touched, setTouched] = useFieldTouched(name, formContext);
   const [error, setError] = useFieldError(name, formContext);

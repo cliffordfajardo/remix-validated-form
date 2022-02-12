@@ -1,57 +1,95 @@
 import { atom, PrimitiveAtom } from "jotai";
-import omit from "lodash/omit";
-import { useEffect } from "react";
+import { atomFamily, useAtomCallback } from "jotai/utils";
+import { useCallback, useEffect, useState } from "react";
 import { useFormAtom, useFormAtomValue, useFormUpdateAtom } from "../hooks";
-import {
-  fieldAtomFamily,
-  formAtomFamily,
-  InternalFormId,
-  FieldAtomKey,
-} from "./atomUtils";
+import { ATOM_SCOPE, formPropsAtom } from "../state";
+import { formAtomFamily, InternalFormId } from "./atomUtils";
 
-const controlledFieldsAtom = formAtomFamily<{
-  [fieldName: string]: PrimitiveAtom<unknown>;
-}>({});
-const fieldValueAtom = fieldAtomFamily(() => atom<unknown>(undefined));
-const refCountAtom = fieldAtomFamily(() => atom(0));
+type ControlledFieldState = {
+  valueAtom: PrimitiveAtom<unknown>;
+  name: string;
+  internalId: symbol;
+};
+const controlledFieldsAtom = formAtomFamily<ControlledFieldState[]>([]);
+const fieldValueAtom = atomFamily((internalId: symbol) =>
+  atom<unknown>(undefined)
+);
+const pendingValidateAtom = atomFamily((internalId: symbol) =>
+  atom<(() => void) | undefined>(undefined)
+);
 
-const registerAtom = atom(null, (get, set, { formId, field }: FieldAtomKey) => {
-  const prevRefCount = get(refCountAtom({ formId, field }));
-  set(refCountAtom({ formId, field }), (prev) => prev + 1);
-  if (prevRefCount === 0) {
-    set(controlledFieldsAtom(formId), (prev) => ({
+type ControlledFieldRegistration = {
+  formId: InternalFormId;
+  internalFieldId: symbol;
+  name: string;
+};
+
+const registerAtom = atom(
+  null,
+  (
+    get,
+    set,
+    { formId, internalFieldId, name }: ControlledFieldRegistration
+  ) => {
+    set(controlledFieldsAtom(formId), (prev) => [
       ...prev,
-      [field]: fieldValueAtom({ formId, field }),
-    }));
+      {
+        valueAtom: fieldValueAtom(internalFieldId),
+        name,
+        internalId: internalFieldId,
+      },
+    ]);
   }
-});
+);
 
 const unregisterAtom = atom(
   null,
-  (get, set, { formId, field }: FieldAtomKey) => {
-    set(refCountAtom({ formId, field }), (prev) => prev - 1);
-    const newRefCount = get(refCountAtom({ formId, field }));
-    if (newRefCount === 0) {
-      set(controlledFieldsAtom(formId), (prev) => omit(prev, field));
-      fieldValueAtom.remove({ formId, field });
-    }
+  (get, set, { formId, internalFieldId }: ControlledFieldRegistration) => {
+    set(controlledFieldsAtom(formId), (prev) =>
+      prev.filter(({ internalId }) => internalId !== internalFieldId)
+    );
+    fieldValueAtom.remove(internalFieldId);
   }
 );
 
 export const useAllControlledFields = (formId: InternalFormId) =>
   useFormAtomValue(controlledFieldsAtom(formId));
 
-export const useFieldValue = (formId: InternalFormId, field: string) => {
-  const fieldAtom = fieldValueAtom({ formId, field });
-  const result = useFormAtom(fieldAtom);
+export const useControllableValue = (formId: InternalFormId, field: string) => {
+  const [internalFieldId] = useState(() => Symbol(`field-${field}`));
+  const fieldAtom = fieldValueAtom(internalFieldId);
+  const [value, setValue] = useFormAtom(fieldAtom);
 
   const register = useFormUpdateAtom(registerAtom);
   const unregister = useFormUpdateAtom(unregisterAtom);
 
   useEffect(() => {
-    register({ formId, field });
-    return () => unregister({ formId, field });
-  }, [field, formId, register, unregister]);
+    register({ formId, internalFieldId, name: field });
+    return () => unregister({ formId, internalFieldId, name: field });
+  }, [field, formId, internalFieldId, register, unregister]);
 
-  return result;
+  const { validateField } = useFormAtomValue(formPropsAtom(formId));
+
+  const setValueAsync = useAtomCallback(
+    useCallback(
+      async (_, set, update: unknown) => {
+        setValue(update);
+        const pending = pendingValidateAtom(internalFieldId);
+        await new Promise<void>((resolve) => set(pending, resolve));
+        set(pending, undefined);
+      },
+      [internalFieldId, setValue]
+    ),
+    ATOM_SCOPE
+  );
+
+  return [value, setValueAsync] as const;
+};
+
+export const useSignalUpdateComplete = (internalFieldId: symbol) => {
+  const pending = useFormAtomValue(pendingValidateAtom(internalFieldId));
+
+  useEffect(() => {
+    pending?.();
+  }, [pending]);
 };
