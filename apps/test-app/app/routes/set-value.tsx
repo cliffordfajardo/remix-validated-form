@@ -36,9 +36,10 @@ const SetValuesButton = () => {
         setFieldValue("textField", "new value");
         setFieldValue("controlled", "some value");
         setFieldValue("checkbox", true);
-        setFieldValue("checkboxGroup", ["value1", "value2"]);
+        setFieldValue("checkboxGroup", ["value2", "value1"]);
         setFieldValue("radioGroup", "value2");
-        setFieldValue("complex", { year: 2021, month: 12, day: 13 });
+        setFieldValue("weird", ["one", "two"]);
+        // setFieldValue("complex", { year: 2021, month: 12, day: 13 });
       }}
     >
       Set values
@@ -47,10 +48,7 @@ const SetValuesButton = () => {
 };
 
 const ComplexInput = () => {
-  const { error, getInputProps } = useField("complex", {
-    // formatValue: (value) =>
-    //   value && `${value.year}-${value.month}-${value.day}`,
-  });
+  const { error, getInputProps } = useField("complex");
   return (
     <div>
       <label htmlFor="complex">Complex</label>
@@ -102,6 +100,12 @@ export default function DefaultValues() {
     >
       <Input name="textField" label="Text Field" />
       <Input name="checkbox" label="A checkbox" type="checkbox" />
+      <Fieldset name="weird" label="Weird">
+        <Input name="weird" label="Weird" type="checkbox" value="two" />
+        <Input name="weird" label="Weird" type="radio" value="one" />
+        <Input name="weird" label="Weird" type="radio" value="two" />
+        <Input name="weird" label="Weird" />
+      </Fieldset>
       <ControlledInput />
       <ComplexInput />
       <Fieldset label="Checkbox group" name="checkboxGroup">
