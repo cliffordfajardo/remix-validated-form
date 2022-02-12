@@ -1,8 +1,7 @@
 import { atom, PrimitiveAtom } from "jotai";
-import { atomFamily, useAtomCallback } from "jotai/utils";
+import { atomFamily } from "jotai/utils";
 import { useCallback, useEffect, useState } from "react";
-import { useFormAtom, useFormAtomValue, useFormUpdateAtom } from "../hooks";
-import { ATOM_SCOPE } from "../state";
+import { useFormAtomValue, useFormUpdateAtom } from "../hooks";
 import { formAtomFamily, InternalFormId } from "./atomUtils";
 
 type ControlledFieldState = {
@@ -52,13 +51,31 @@ const unregisterAtom = atom(
   }
 );
 
+const setControlledFieldValueAtom = atom(
+  null,
+  async (
+    _get,
+    set,
+    { internalFieldId, value }: { internalFieldId: symbol; value: unknown }
+  ) => {
+    set(fieldValueAtom(internalFieldId), value);
+    const pending = pendingValidateAtom(internalFieldId);
+    await new Promise<void>((resolve) => set(pending, resolve));
+    set(pending, undefined);
+  }
+);
+
+export const useSetControlledFieldValue = () =>
+  useFormUpdateAtom(setControlledFieldValueAtom);
+
 export const useAllControlledFields = (formId: InternalFormId) =>
   useFormAtomValue(controlledFieldsAtom(formId));
 
 export const useControllableValue = (formId: InternalFormId, field: string) => {
   const [internalFieldId] = useState(() => Symbol(`field-${field}`));
   const fieldAtom = fieldValueAtom(internalFieldId);
-  const [value, setValue] = useFormAtom(fieldAtom);
+  const value = useFormAtomValue(fieldAtom);
+  const setControlledFieldValue = useSetControlledFieldValue();
 
   const register = useFormUpdateAtom(registerAtom);
   const unregister = useFormUpdateAtom(unregisterAtom);
@@ -68,20 +85,12 @@ export const useControllableValue = (formId: InternalFormId, field: string) => {
     return () => unregister({ formId, internalFieldId, name: field });
   }, [field, formId, internalFieldId, register, unregister]);
 
-  const setValueAsync = useAtomCallback(
-    useCallback(
-      async (_, set, update: unknown) => {
-        setValue(update);
-        const pending = pendingValidateAtom(internalFieldId);
-        await new Promise<void>((resolve) => set(pending, resolve));
-        set(pending, undefined);
-      },
-      [internalFieldId, setValue]
-    ),
-    ATOM_SCOPE
+  const setValue = useCallback(
+    (value: unknown) => setControlledFieldValue({ internalFieldId, value }),
+    [internalFieldId, setControlledFieldValue]
   );
 
-  return [value, setValueAsync] as const;
+  return [value, setValue] as const;
 };
 
 export const useSignalUpdateComplete = (internalFieldId: symbol) => {
