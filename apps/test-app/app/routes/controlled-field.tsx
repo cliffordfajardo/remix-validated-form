@@ -12,6 +12,7 @@ import { SubmitButton } from "~/components/SubmitButton";
 const validator = withZod(
   z.object({
     myField: z.literal("blue"),
+    text: z.literal("bob"),
   })
 );
 
@@ -22,22 +23,22 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 const Controlled = () => {
-  const { value, setValue, error } = useControlledField("myField");
+  const { value, setValue, error, validate } = useControlledField("myField");
+  const update = async (value: string) => {
+    await setValue(value);
+    validate();
+  };
   return (
     <div>
-      <button type="button" onClick={() => setValue("blue")} data-testid="blue">
+      <button type="button" onClick={() => update("blue")} data-testid="blue">
         Blue{value === "blue" && " (selected)"}
       </button>
-      <button
-        type="button"
-        onClick={() => setValue("green")}
-        data-testid="green"
-      >
+      <button type="button" onClick={() => update("green")} data-testid="green">
         Green{value === "green" && " (selected)"}
       </button>
       <button
         type="button"
-        onClick={() => setValue("yellow")}
+        onClick={() => update("yellow")}
         data-testid="yellow"
       >
         Yellow{value === "yellow" && " (selected)"}
@@ -47,6 +48,30 @@ const Controlled = () => {
           {error}
         </p>
       )}
+    </div>
+  );
+};
+
+const ControlledInput = () => {
+  const { value, setValue, error, validate } =
+    useControlledField<string>("text");
+  const [count, setCount] = useState(0);
+
+  const update = async (value: string) => {
+    await setValue(value);
+    validate();
+    setCount((prev) => prev + 1);
+  };
+
+  return (
+    <div>
+      <input
+        value={value}
+        onChange={(e) => update(e.target.value)}
+        data-testid="text-input"
+      />
+      {error && <p data-testid="text-error">{error}</p>}
+      <p data-testid="resolution-count">{count}</p>
     </div>
   );
 };
@@ -78,6 +103,7 @@ export default function ControlledField() {
       {[...range(0, count)].map((_, i) => (
         <Controlled key={i} />
       ))}
+      <ControlledInput />
       <SubmitButton />
     </ValidatedForm>
   );

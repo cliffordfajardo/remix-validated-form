@@ -9,6 +9,8 @@ describe("Controlled fields", () => {
       .should("have.text", "Blue (selected)");
     cy.findByTestId("green").should("have.text", "Green");
 
+    cy.findByTestId("text-input").type("bob");
+
     cy.findByText("Submit").click();
     cy.findByText("Color chosen is blue").should("exist");
   });
@@ -37,5 +39,13 @@ describe("Controlled fields", () => {
     cy.visit("/controlled-field");
     cy.findByText("Submit").click();
     cy.findByTestId("error").should("exist");
+    cy.findByTestId("text-error").should("exist");
+  });
+
+  it("should validate against the correct value and resolve all promises along theway", () => {
+    cy.visit("/controlled-field");
+    cy.findByTestId("text-input").type("some test text");
+    cy.findByText("Expected bob, received some test text").should("exist");
+    cy.findByTestId("resolution-count").should("have.text", "14");
   });
 });
