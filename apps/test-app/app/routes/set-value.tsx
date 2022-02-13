@@ -39,6 +39,7 @@ const SetValuesButton = () => {
         setFieldValue("checkboxGroup", ["value2", "value1"]);
         setFieldValue("radioGroup", "value2");
         setFieldValue("weird", ["one", "two"]);
+        // TODO: figure out how to deal with complex transformations like this
         // setFieldValue("complex", { year: 2021, month: 12, day: 13 });
       }}
     >
@@ -66,7 +67,7 @@ const ControlledInput = () => {
       <div style={{ display: "flex" }}>
         <label htmlFor="controlled">Controlled</label>
         <input
-          id="controlled"
+          data-testid="controlled"
           {...getInputProps({
             onChange: (e) => {
               console.log(e);
@@ -98,13 +99,36 @@ export default function DefaultValues() {
       }}
       id="test-form"
     >
-      <Input name="textField" label="Text Field" />
-      <Input name="checkbox" label="A checkbox" type="checkbox" />
+      <Input name="textField" label="Text Field" data-testid="text-field" />
+      <Input
+        name="checkbox"
+        label="A checkbox"
+        type="checkbox"
+        data-testid="single-checkbox"
+      />
       <Fieldset name="weird" label="Weird">
-        <Input name="weird" label="Weird" type="checkbox" value="two" />
-        <Input name="weird" label="Weird" type="radio" value="one" />
-        <Input name="weird" label="Weird" type="radio" value="two" />
-        <Input name="weird" label="Weird" />
+        <Input
+          name="weird"
+          label="Weird"
+          type="checkbox"
+          value="two"
+          data-testid="weird-checkbox"
+        />
+        <Input
+          name="weird"
+          label="Weird"
+          type="radio"
+          value="one"
+          data-testid="weird-radio-one"
+        />
+        <Input
+          name="weird"
+          label="Weird"
+          type="radio"
+          value="two"
+          data-testid="weird-radio-two"
+        />
+        <Input name="weird" label="Weird" data-testid="weird-text" />
       </Fieldset>
       <ControlledInput />
       <ComplexInput />
@@ -115,6 +139,7 @@ export default function DefaultValues() {
           value="value1"
           hideErrors
           type="checkbox"
+          data-testid="checkbox-value1"
         />
         <Input
           name="checkboxGroup"
@@ -122,6 +147,7 @@ export default function DefaultValues() {
           value="value2"
           hideErrors
           type="checkbox"
+          data-testid="checkbox-value2"
         />
         <Input
           name="checkboxGroup"
@@ -129,6 +155,7 @@ export default function DefaultValues() {
           value="value3"
           hideErrors
           type="checkbox"
+          data-testid="checkbox-value3"
         />
       </Fieldset>
       <Fieldset label="Radio group" name="checkboxGroup">
@@ -138,6 +165,7 @@ export default function DefaultValues() {
           value="value1"
           hideErrors
           type="radio"
+          data-testid="radio-value1"
         />
         <Input
           name="radioGroup"
@@ -145,6 +173,7 @@ export default function DefaultValues() {
           value="value2"
           hideErrors
           type="radio"
+          data-testid="radio-value2"
         />
         <Input
           name="radioGroup"
@@ -152,6 +181,7 @@ export default function DefaultValues() {
           value="value3"
           hideErrors
           type="radio"
+          data-testid="radio-value3"
         />
       </Fieldset>
       <SetValuesButton />
