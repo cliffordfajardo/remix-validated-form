@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { Fieldset } from "~/components/Fieldset";
 import { Input } from "~/components/Input";
+import { Select } from "~/components/Select";
 import { SubmitButton } from "~/components/SubmitButton";
 
 const validator = withZod(
@@ -39,6 +40,7 @@ const SetValuesButton = () => {
         setFieldValue("checkboxGroup", ["value2", "value1"]);
         setFieldValue("radioGroup", "value2");
         setFieldValue("weird", ["one", "two"]);
+        setFieldValue("select", ["option1", "option3"]);
         // TODO: figure out how to deal with complex transformations like this
         // setFieldValue("complex", { year: 2021, month: 12, day: 13 });
       }}
@@ -84,7 +86,7 @@ const ControlledInput = () => {
   );
 };
 
-export default function DefaultValues() {
+export default function SetValues() {
   return (
     <ValidatedForm
       validator={validator}
@@ -106,6 +108,17 @@ export default function DefaultValues() {
         type="checkbox"
         data-testid="single-checkbox"
       />
+      <Select name="select" label="Select" data-testid="select" multiple>
+        <option value="option1" data-testid="option1">
+          Option 1
+        </option>
+        <option value="option2" data-testid="option2">
+          Option 2
+        </option>
+        <option value="option3" data-testid="option3">
+          Option 3
+        </option>
+      </Select>
       <Fieldset name="weird" label="Weird">
         <Input
           name="weird"

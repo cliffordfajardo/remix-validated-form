@@ -13,5 +13,8 @@ describe("setFieldValue", () => {
     cy.findByTestId("weird-radio-one").should("be.checked");
     cy.findByTestId("weird-radio-two").should("not.be.checked");
     cy.findByTestId("weird-text").should("have.value", "two");
+    cy.findByTestId("option1").should("be.checked");
+    cy.findByTestId("option2").should("not.be.checked");
+    cy.findByTestId("option3").should("be.checked");
   });
 });
