@@ -1,82 +1,71 @@
 import { atom, PrimitiveAtom } from "jotai";
 import { atomFamily, useAtomCallback } from "jotai/utils";
-import { useCallback, useEffect, useState } from "react";
+import omit from "lodash/omit";
+import { useCallback, useEffect } from "react";
 import invariant from "tiny-invariant";
 import { useFormAtomValue, useFormUpdateAtom } from "../hooks";
 import { setInputValueInForm } from "../logic/setInputValueInForm";
 import { ATOM_SCOPE, formElementAtom } from "../state";
-import { formAtomFamily, InternalFormId } from "./atomUtils";
+import {
+  fieldAtomFamily,
+  FieldAtomKey,
+  formAtomFamily,
+  InternalFormId,
+} from "./atomUtils";
 
-type ControlledFieldState = {
-  valueAtom: PrimitiveAtom<unknown>;
-  name: string;
-  internalId: symbol;
-};
-const controlledFieldsAtom = formAtomFamily<ControlledFieldState[]>([]);
-const fieldValueAtom = atomFamily((internalId: symbol) =>
-  atom<unknown>(undefined)
-);
-const pendingValidateAtom = atomFamily((internalId: symbol) =>
+const controlledFieldsAtom = formAtomFamily<
+  Record<string, PrimitiveAtom<unknown>>
+>({});
+const fieldValueAtom = fieldAtomFamily(() => atom<unknown>(undefined));
+const pendingValidateAtom = fieldAtomFamily(() =>
   atom<(() => void) | undefined>(undefined)
 );
+const refCountAtom = fieldAtomFamily(() => atom(0));
 
-type ControlledFieldRegistration = {
-  formId: InternalFormId;
-  internalFieldId: symbol;
-  name: string;
-};
+const registerAtom = atom(null, (get, set, { formId, field }: FieldAtomKey) => {
+  set(refCountAtom({ formId, field }), (prev) => prev + 1);
+  const refCount = get(refCountAtom({ formId, field }));
 
-const registerAtom = atom(
-  null,
-  (
-    get,
-    set,
-    { formId, internalFieldId, name }: ControlledFieldRegistration
-  ) => {
-    set(controlledFieldsAtom(formId), (prev) => [
+  if (refCount === 1) {
+    set(controlledFieldsAtom(formId), (prev) => ({
       ...prev,
-      {
-        valueAtom: fieldValueAtom(internalFieldId),
-        name,
-        internalId: internalFieldId,
-      },
-    ]);
+      [field]: fieldValueAtom({ formId, field }),
+    }));
   }
-);
+});
 
 const unregisterAtom = atom(
   null,
-  (get, set, { formId, internalFieldId }: ControlledFieldRegistration) => {
-    set(controlledFieldsAtom(formId), (prev) =>
-      prev.filter(({ internalId }) => internalId !== internalFieldId)
-    );
-    fieldValueAtom.remove(internalFieldId);
+  (get, set, { formId, field }: FieldAtomKey) => {
+    set(refCountAtom({ formId, field }), (prev) => prev - 1);
+    const refCount = get(refCountAtom({ formId, field }));
+    if (refCount === 0) {
+      set(controlledFieldsAtom(formId), (prev) => omit(prev, field));
+      fieldValueAtom.remove({ formId, field });
+    }
   }
 );
 
-const setControlledFieldValueAtom = atom(
-  null,
-  async (
-    _get,
-    set,
-    { internalFieldId, value }: { internalFieldId: symbol; value: unknown }
-  ) => {
-    set(fieldValueAtom(internalFieldId), value);
-    const pending = pendingValidateAtom(internalFieldId);
-    await new Promise<void>((resolve) => set(pending, resolve));
-    set(pending, undefined);
-  }
+const setControlledFieldValueAtom = atomFamily((formId: InternalFormId) =>
+  atom(
+    null,
+    async (_get, set, { field, value }: { field: string; value: unknown }) => {
+      set(fieldValueAtom({ formId, field }), value);
+      const pending = pendingValidateAtom({ formId, field });
+      await new Promise<void>((resolve) => set(pending, resolve));
+      set(pending, undefined);
+    }
+  )
 );
 
-export const useSetFieldValue = (formId: InternalFormId) =>
-  useAtomCallback(
+export const useSetFieldValue = (formId: InternalFormId) => {
+  return useAtomCallback(
     async (get, set, { field, value }: { field: string; value: unknown }) => {
       const controlledFields = get(controlledFieldsAtom(formId));
-      const relevantFields = controlledFields.filter(
-        ({ name }) => name === field
-      );
+      const fieldAtom = controlledFields[field];
 
-      if (relevantFields.length === 0) {
+      if (fieldAtom) set(fieldAtom, value);
+      else {
         const form = get(formElementAtom(formId));
         invariant(
           form,
@@ -85,62 +74,42 @@ export const useSetFieldValue = (formId: InternalFormId) =>
         setInputValueInForm(form, field, value);
         return;
       }
-
-      if (relevantFields.length === 1) {
-        await set(setControlledFieldValueAtom, {
-          internalFieldId: relevantFields[0].internalId,
-          value,
-        });
-        return;
-      }
-
-      if (relevantFields.length > 1) {
-        invariant(
-          Array.isArray(value),
-          `Multiple instances of controlled field ${field} are present but was given a single value.` +
-            "Please supply an array of values instead."
-        );
-        for (const [index, field] of relevantFields.entries()) {
-          const itemValue = value[index] ?? "";
-          await set(setControlledFieldValueAtom, {
-            internalFieldId: field.internalId,
-            value: itemValue,
-          });
-        }
-      }
     },
     ATOM_SCOPE
   );
+};
 
 export const useAllControlledFields = (formId: InternalFormId) =>
   useFormAtomValue(controlledFieldsAtom(formId));
 
 export const useControllableValue = (formId: InternalFormId, field: string) => {
-  const [internalFieldId] = useState(() => Symbol(`field-${field}`));
-  const fieldAtom = fieldValueAtom(internalFieldId);
+  const fieldAtom = fieldValueAtom({ formId, field });
   const value = useFormAtomValue(fieldAtom);
   const setControlledFieldValue = useFormUpdateAtom(
-    setControlledFieldValueAtom
+    setControlledFieldValueAtom(formId)
   );
 
   const register = useFormUpdateAtom(registerAtom);
   const unregister = useFormUpdateAtom(unregisterAtom);
 
   useEffect(() => {
-    register({ formId, internalFieldId, name: field });
-    return () => unregister({ formId, internalFieldId, name: field });
-  }, [field, formId, internalFieldId, register, unregister]);
+    register({ formId, field });
+    return () => unregister({ formId, field });
+  }, [field, formId, register, unregister]);
 
   const setValue = useCallback(
-    (value: unknown) => setControlledFieldValue({ internalFieldId, value }),
-    [internalFieldId, setControlledFieldValue]
+    (value: unknown) => setControlledFieldValue({ field, value }),
+    [field, setControlledFieldValue]
   );
 
   return [value, setValue] as const;
 };
 
-export const useSignalUpdateComplete = (internalFieldId: symbol) => {
-  const pending = useFormAtomValue(pendingValidateAtom(internalFieldId));
+export const useSignalUpdateComplete = (
+  formId: InternalFormId,
+  field: string
+) => {
+  const pending = useFormAtomValue(pendingValidateAtom({ formId, field }));
 
   useEffect(() => {
     pending?.();

@@ -15,18 +15,13 @@ describe("Controlled fields", () => {
     cy.findByText("Color chosen is blue").should("exist");
   });
 
-  it("should handle duplicate fields the way they would normally work and reset when field is removed", () => {
+  it("should correctly unregsiter when no instances of the field are present", () => {
     cy.visit("/controlled-field");
 
     cy.findByTestId("blue").click().should("have.text", "Blue (selected)");
 
-    cy.findByText("+").click();
-    cy.findAllByTestId("blue").should("have.length", 2);
-
-    cy.findByText("Blue (selected)").should("exist");
-    cy.findByText("Green (selected)").should("exist");
-
-    cy.findByText("-").click();
+    cy.findByText("+").click().click().click();
+    cy.findByText("-").click().click().click();
     cy.findByTestId("blue").should("have.text", "Blue (selected)");
 
     cy.findByText("-").click();

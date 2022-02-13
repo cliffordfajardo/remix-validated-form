@@ -206,16 +206,14 @@ const ControlledField = ({
   name,
   valueAtom,
   formId,
-  internalId,
 }: {
   name: string;
   valueAtom: Atom<unknown>;
   formId: InternalFormId;
-  internalId: symbol;
 }) => {
   const value = useFormAtomValue(valueAtom);
   const defaultValue = useFieldDefaultValue(name, { formId });
-  useSignalUpdateComplete(internalId);
+  useSignalUpdateComplete(formId, name);
 
   return (
     <input
@@ -230,13 +228,12 @@ const ControlledFieldValues = ({ formId }: { formId: InternalFormId }) => {
   const controlledFieldValues = useAllControlledFields(formId);
   return (
     <>
-      {controlledFieldValues.map(({ name, valueAtom, internalId }) => (
+      {Object.entries(controlledFieldValues).map(([name, valueAtom]) => (
         <ControlledField
           key={name}
           name={name}
           valueAtom={valueAtom}
           formId={formId}
-          internalId={internalId}
         />
       ))}
     </>
